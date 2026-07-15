@@ -51,8 +51,8 @@ export default function Sidebar({ user, onClose }: SidebarProps) {
       {/* Brand Header with Close Button for Mobile */}
       <div className="p-6 border-b border-slate-800 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-wider text-emerald-400">ASIK APP</h1>
-          <p className="text-xs text-slate-400 mt-1">Sistem Informasi Karyawan</p>
+          <h1 className="text-lg font-bold tracking-wider text-emerald-400 leading-tight">ASIK</h1>
+          <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">Aplikasi Sistem Informasi Karyawan<br/>PKS Aur Gading</p>
         </div>
         {onClose && (
           <button

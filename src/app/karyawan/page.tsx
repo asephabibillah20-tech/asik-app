@@ -313,7 +313,7 @@ export default function KaryawanDashboard() {
           <div class="header">
             <div class="header-left">
               <h2>PKS AUR GADING</h2>
-              <p>Aplikasi Sistem Informasi Karyawan & Cuti (ASIK)</p>
+              <p>Aplikasi Sistem Informasi Karyawan PKS Aur Gading (ASIK PAG)</p>
             </div>
             <div class="header-right">
               Surat Izin Cuti

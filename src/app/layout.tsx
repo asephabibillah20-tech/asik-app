@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ASIK - Sistem Informasi Karyawan",
-  description: "Sistem Informasi Karyawan & Pengajuan Cuti",
+  title: "ASIK - Aplikasi Sistem Informasi Karyawan PKS Aur Gading",
+  description: "Aplikasi Sistem Informasi Karyawan PKS Aur Gading - Pengelolaan Data Karyawan & Pengajuan Cuti",
 };
 
 export default function RootLayout({
