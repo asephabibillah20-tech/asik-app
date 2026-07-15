@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Model Karyawan
+model Employee {
+  id                String   @id @default(uuid())
+  nik               String   @unique // Login Utama menggunakan NIK
+  password          String
+  name              String
+  role              String   @default("KARYAWAN") // ADMIN atau KARYAWAN
+  position          String
+  department        String
+  joinedAt          DateTime @default(now())      // Tanggal Masuk Kerja
+  hireDate          DateTime                      // Tanggal Pengangkatan (Acuan Kelipatan 6 Tahun)
+  
+  leaveAnnual       Int      @default(12)         // Kuota Cuti Tahunan (bisa minus)
+  leaveLong         Int      @default(0)          // Kuota Cuti Panjang (bisa minus)
+  
+  leaves            Leave[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// Model Pengajuan Cuti
+model Leave {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime
+  totalDays  Int
+  reason     String
+  leaveType  String   // "TAHUNAN" atau "PANJANG"
+  isBorrowed Boolean  @default(false)              // True jika meminjam cuti (kuota tidak cukup)
+  status     String   @default("PENDING")          // PENDING, APPROVED, REJECTED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
