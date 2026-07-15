@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyJWT } from "@/utils/auth";
 import { hashPassword } from "@/utils/auth";
+import { logActivity } from "@/lib/leaveHelper";
 
 async function checkAdmin() {
   const cookieStore = await cookies();
@@ -23,7 +24,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const body = await req.json();
-    const { nik, name, password, role, position, department, joinedAt, hireDate, leaveAnnual, leaveLong } = body;
+    const { nik, name, password, role, position, department, joinedAt, hireDate, leaveAnnual, leaveLong, status, contractType } = body;
 
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) {
@@ -37,6 +38,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       role,
       position,
       department,
+      status: status !== undefined ? status : undefined,
+      contractType: contractType !== undefined ? contractType : undefined,
       joinedAt: joinedAt ? new Date(joinedAt) : undefined,
       hireDate: hireDate ? new Date(hireDate) : undefined,
       leaveAnnual: leaveAnnual !== undefined ? parseInt(leaveAnnual) : undefined,
@@ -52,6 +55,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       where: { id },
       data: updateData,
     });
+
+    // Catat log aktivitas edit karyawan
+    await logActivity(admin.userId, `Memperbarui data karyawan: ${name} (NIK: ${nik})`);
 
     return NextResponse.json({ message: "Karyawan berhasil diperbarui", employee: updated });
   } catch (error) {
@@ -74,6 +80,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!existing) {
       return NextResponse.json({ error: "Karyawan tidak ditemukan" }, { status: 404 });
     }
+
+    // Catat log aktivitas hapus karyawan
+    await logActivity(admin.userId, `Menghapus karyawan: ${existing.name} (NIK: ${existing.nik})`);
 
     await prisma.employee.delete({ where: { id } });
 

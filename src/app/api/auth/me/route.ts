@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyJWT } from "@/utils/auth";
 import { prisma } from "@/lib/prisma";
+import { syncEmployeeQuotas } from "@/lib/leaveHelper";
 
 export async function GET() {
   try {
@@ -17,6 +18,13 @@ export async function GET() {
       return NextResponse.json({ error: "Sesi tidak valid" }, { status: 401 });
     }
 
+    // Sinkronisasi kuota dinamis sebelum mengambil data profil terbaru
+    try {
+      await syncEmployeeQuotas(decoded.userId);
+    } catch (syncErr) {
+      console.error("Gagal sinkronisasi kuota user:", syncErr);
+    }
+
     const employee = await prisma.employee.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -30,6 +38,7 @@ export async function GET() {
         hireDate: true,
         leaveAnnual: true,
         leaveLong: true,
+        contractType: true,
       },
     });
 

@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { verifyJWT } from "@/utils/auth";
-import Sidebar from "@/components/shared/Sidebar";
-import Navbar from "@/components/shared/Navbar";
+import { verifyJWT } from "@/utils/jwt";
+import DashboardWrapper from "@/components/shared/DashboardWrapper";
 
 export default async function KaryawanLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -13,23 +12,13 @@ export default async function KaryawanLayout({ children }: { children: React.Rea
   }
 
   const payload = await verifyJWT(token);
-  if (!payload || payload.role !== "KARYAWAN") {
+  if (!payload || (payload.role !== "KARYAWAN" && payload.role !== "PIMPINAN" && payload.role !== "PELAKSANA")) {
     redirect("/login");
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar user={{ name: payload.name, role: payload.role, nik: payload.nik }} />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Navbar */}
-        <Navbar title="Employee Portal" />
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
-      </div>
-    </div>
+    <DashboardWrapper user={{ name: payload.name, role: payload.role, nik: payload.nik }}>
+      {children}
+    </DashboardWrapper>
   );
 }

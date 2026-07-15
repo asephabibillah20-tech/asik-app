@@ -21,8 +21,11 @@ model Employee {
   
   leaveAnnual       Int      @default(12)         // Kuota Cuti Tahunan (bisa minus)
   leaveLong         Int      @default(0)          // Kuota Cuti Panjang (bisa minus)
+  status            String   @default("AKTIF")    // AKTIF, TIDAK_AKTIF, PENSIUN, PTDH
+  contractType      String   @default("PKWTT")    // PKWTT (Tetap) atau PKWT (Kontrak)
   
   leaves            Leave[]
+  loginLogs         LoginLog[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -39,6 +42,19 @@ model Leave {
   leaveType  String   // "TAHUNAN" atau "PANJANG"
   isBorrowed Boolean  @default(false)              // True jika meminjam cuti (kuota tidak cukup)
   status     String   @default("PENDING")          // PENDING, APPROVED, REJECTED
+  approvedByName String?
+  approvedByPosition String?
+  approvedByNik String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// Model Log Aktivitas Login Karyawan
+model LoginLog {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  activity   String   @default("LOGIN") // E.g., "LOGIN", "LOGOUT", "MEMBUAT_KARYAWAN", "MENGAJUKAN_CUTI", dll.
+  device     String?  // Perangkat yang digunakan
+  createdAt  DateTime @default(now())
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { comparePassword, signJWT } from "@/utils/auth";
+import { logActivity } from "@/lib/leaveHelper";
 
 export async function POST(req: Request) {
   try {
@@ -25,6 +26,18 @@ export async function POST(req: Request) {
       );
     }
 
+    // Blokir login jika status tidak AKTIF
+    if (employee.status !== "AKTIF") {
+      let statusLabel = "Tidak Aktif";
+      if (employee.status === "PENSIUN") statusLabel = "Pensiun";
+      else if (employee.status === "PTDH") statusLabel = "Pemberhentian Tidak Dengan Hormat (PTDH)";
+
+      return NextResponse.json(
+        { error: `Gagal masuk: Status akun Anda adalah ${statusLabel}. Silakan hubungi HR.` },
+        { status: 403 }
+      );
+    }
+
     // Bandingkan password
     const isMatch = await comparePassword(password, employee.password);
     if (!isMatch) {
@@ -41,6 +54,9 @@ export async function POST(req: Request) {
       role: employee.role,
       name: employee.name,
     });
+
+    // Catat log aktivitas login ke database
+    await logActivity(employee.id, "LOGIN");
 
     // Buat response
     const response = NextResponse.json({

@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/karyawan", request.url));
     }
 
-    if (isKaryawanRoute && payload.role !== "KARYAWAN") {
+    if (isKaryawanRoute && payload.role !== "KARYAWAN" && payload.role !== "PIMPINAN" && payload.role !== "PELAKSANA") {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
   }

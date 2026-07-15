@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyJWT } from "@/utils/auth";
+import { syncEmployeeQuotas, logActivity } from "@/lib/leaveHelper";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,8 +14,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const decoded = await verifyJWT(token);
-    if (!decoded || decoded.role !== "ADMIN") {
-      return NextResponse.json({ error: "Akses ditolak, hanya Admin yang diizinkan" }, { status: 403 });
+    if (!decoded || (decoded.role !== "ADMIN" && decoded.role !== "PIMPINAN")) {
+      return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -30,28 +31,59 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Data pengajuan tidak ditemukan" }, { status: 404 });
     }
 
+    let approvedByName = "Budi Santoso";
+    let approvedByPosition = "HR Administrator";
+    let approvedByNik: string | null = null;
+
+    if (decoded.role === "PIMPINAN") {
+      const manager = await prisma.employee.findUnique({
+        where: { id: decoded.userId }
+      });
+      if (!manager || manager.department !== leaveDetails.employee.department) {
+        return NextResponse.json({ error: "Akses ditolak, Anda hanya dapat memproses cuti dari departemen Anda sendiri" }, { status: 403 });
+      }
+      if (leaveDetails.employee.role !== "PELAKSANA") {
+        return NextResponse.json({ error: "Akses ditolak, Anda hanya dapat memproses cuti untuk Karyawan Pelaksana" }, { status: 403 });
+      }
+      approvedByName = manager.name;
+      approvedByPosition = manager.position;
+      approvedByNik = manager.nik;
+    }
+
     if (leaveDetails.status !== "PENDING") {
       return NextResponse.json({ error: "Pengajuan ini sudah diproses sebelumnya" }, { status: 400 });
     }
 
     const { employee, totalDays, leaveType } = leaveDetails;
-    const currentBalance = leaveType === "TAHUNAN" ? employee.leaveAnnual : employee.leaveLong;
-    
-    // Deteksi jika kuota tidak cukup -> Otomatis masuk skema Pinjam Cuti
-    const isBorrowed = currentBalance < totalDays;
-    const newBalance = currentBalance - totalDays; // Hasil bisa minus/negatif
 
-    // Update Transaksional Database
-    await prisma.$transaction([
-      prisma.leave.update({
+    // 1. Sinkronisasi kuota karyawan teraktual sebelum kalkulasi persetujuan
+    const syncedEmployee = await syncEmployeeQuotas(employee.id);
+    const currentBalance = leaveType === "TAHUNAN" ? syncedEmployee.leaveAnnual : syncedEmployee.leaveLong;
+    
+    // Deteksi jika kuota tidak cukup -> Skema Pinjam Cuti
+    const isBorrowed = currentBalance < totalDays;
+
+    // 2. Jalankan transaksi database
+    await prisma.$transaction(async (tx) => {
+      // Perbarui status pengajuan menjadi APPROVED
+      await tx.leave.update({
         where: { id: leaveId },
-        data: { status: "APPROVED", isBorrowed },
-      }),
-      prisma.employee.update({
-        where: { id: employee.id },
-        data: leaveType === "TAHUNAN" ? { leaveAnnual: newBalance } : { leaveLong: newBalance },
-      }),
-    ]);
+        data: { 
+          status: "APPROVED", 
+          isBorrowed,
+          approvedByName,
+          approvedByPosition,
+          approvedByNik
+        },
+      });
+    });
+
+    // 3. Sinkronkan ulang saldo cuti karyawan (ini akan otomatis mengurangi kuota di database
+    // karena pengajuan di atas statusnya sudah berubah menjadi APPROVED)
+    await syncEmployeeQuotas(employee.id);
+
+    // Catat log aktivitas menyetujui cuti
+    await logActivity(decoded.userId, `Menyetujui cuti ${leaveType} ${employee.name} (${totalDays} hari)`);
 
     return NextResponse.json({ message: "Pengajuan berhasil disetujui" });
   } catch (error) {

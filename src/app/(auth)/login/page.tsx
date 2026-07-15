@@ -70,8 +70,10 @@ export default function LoginPage() {
             <input
               type="text"
               required
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={nik}
-              onChange={(e) => setNik(e.target.value)}
+              onChange={(e) => setNik(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="Masukkan NIK Anda"
               className="w-full bg-slate-950/50 border border-slate-800 focus:border-emerald-500 text-slate-100 text-sm px-4 py-3 rounded-xl outline-none transition-all placeholder-slate-600"
             />
