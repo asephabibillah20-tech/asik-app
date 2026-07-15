@@ -470,6 +470,30 @@ export default function AdminDashboard() {
             else if (statusUpper.includes("PTDH")) record.status = "PTDH";
           }
 
+          // Normalisasi format tanggal: DD/MM/YYYY atau DD-MM-YYYY → YYYY-MM-DD
+          const normalizeDate = (raw: string): string => {
+            if (!raw) return "";
+            // Sudah format YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            // Format DD/MM/YYYY atau DD-MM-YYYY
+            const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (match) {
+              const [, day, month, year] = match;
+              return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+            }
+            // Format M/D/YYYY (Amerika) → cek apakah sudah YYYY di akhir
+            const matchAlt = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+            if (matchAlt) {
+              const [, day, month, year] = matchAlt;
+              const fullYear = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+              return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+            }
+            return raw;
+          };
+
+          if (record.joinedAt) record.joinedAt = normalizeDate(record.joinedAt);
+          if (record.hireDate) record.hireDate = normalizeDate(record.hireDate);
+
           // Validasi Klien
           const validationErrors: string[] = [];
           if (!record.nik) validationErrors.push("NIK wajib diisi");
@@ -477,8 +501,8 @@ export default function AdminDashboard() {
           if (!record.password) validationErrors.push("Password wajib diisi");
           if (!record.position) validationErrors.push("Jabatan wajib diisi");
           if (!record.department) validationErrors.push("Departemen wajib diisi");
-          if (!record.joinedAt || isNaN(Date.parse(record.joinedAt))) validationErrors.push("Format Tanggal Masuk salah (gunakan YYYY-MM-DD)");
-          if (!record.hireDate || isNaN(Date.parse(record.hireDate))) validationErrors.push("Format Tanggal Pengangkatan salah (gunakan YYYY-MM-DD)");
+          if (!record.joinedAt || isNaN(Date.parse(record.joinedAt))) validationErrors.push("Format Tanggal Masuk tidak valid (pastikan format DD/MM/YYYY atau YYYY-MM-DD)");
+          if (!record.hireDate || isNaN(Date.parse(record.hireDate))) validationErrors.push("Format Tanggal Pengangkatan tidak valid (pastikan format DD/MM/YYYY atau YYYY-MM-DD)");
 
           // Cek duplikasi di file sendiri
           const isDuplicateInFile = rows.some(r => r.nik === record.nik);
