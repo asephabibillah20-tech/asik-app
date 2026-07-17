@@ -567,58 +567,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fungsi untuk mengunduh laporan baris yang gagal validasi agar dapat diperbaiki dan diimpor kembali
-  const downloadErrorReport = () => {
-    const errorRows = parsedRows.filter(row => row.validationErrors?.length > 0);
-    if (errorRows.length === 0) return;
-
-    const headers = [
-      "NIK",
-      "Nama",
-      "Password",
-      "Role (PELAKSANA/PIMPINAN/ADMIN)",
-      "Jabatan",
-      "Departemen",
-      "Tanggal Masuk (YYYY-MM-DD)",
-      "Tanggal Pengangkatan (YYYY-MM-DD)",
-      "Tipe Kontrak (PKWTT/PKWT)",
-      "Status (AKTIF/TIDAK_AKTIF/PENSIUN/PTDH)",
-      "Keterangan Error"
-    ];
-
-    const rows = errorRows.map(row => {
-      const cleanErrors = (row.validationErrors || []).join(" | ").replace(/;/g, " ").replace(/,/g, " ");
-      return [
-        row.nik || "",
-        row.name || "",
-        row.password || "",
-        row.role || "",
-        row.position || "",
-        row.department || "",
-        row.joinedAt || "",
-        row.hireDate || "",
-        row.contractType || "",
-        row.status || "",
-        cleanErrors
-      ];
-    });
-
-    const csvContent = [
-      headers.join(";"),
-      ...rows.map(row => row.join(";"))
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `laporan_error_import_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Buka modal edit dan isi form
   const openEditModal = (emp: Employee) => {
     setSelectedEmployee(emp);
@@ -2842,23 +2790,13 @@ export default function AdminDashboard() {
               {/* Data Preview Table */}
               {parsedRows.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Pratinjau Data ({parsedRows.length} baris terdeteksi)
                     </h4>
-                    {parsedRows.some(r => r.validationErrors?.length > 0) ? (
-                      <button
-                        type="button"
-                        onClick={downloadErrorReport}
-                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold py-1 px-3 rounded-lg cursor-pointer transition-all flex items-center gap-1.5 shadow-3xs"
-                      >
-                        ⚠️ Download Laporan Error (CSV)
-                      </button>
-                    ) : (
-                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium border border-slate-200/50">
-                        Periksa status kolom validasi sebelum memproses impor
-                      </span>
-                    )}
+                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium border border-slate-200/50">
+                      Periksa status kolom validasi sebelum memproses impor
+                    </span>
                   </div>
                   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto shadow-2xs">
                     <table className="w-full text-left border-collapse text-xs">
@@ -2920,42 +2858,29 @@ export default function AdminDashboard() {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-slate-50 flex-shrink-0">
-              <div>
-                {parsedRows.some(r => r.validationErrors?.length > 0) && (
-                  <button
-                    type="button"
-                    onClick={downloadErrorReport}
-                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold py-2 px-4 rounded-xl cursor-pointer transition-all flex items-center gap-2 shadow-xs hover:border-rose-300"
-                  >
-                    ⚠️ Download Laporan Error (CSV)
-                  </button>
+            <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setParsedRows([]);
+                  setImportError("");
+                }}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 px-4 rounded-xl cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={importLoading || parsedRows.length === 0 || parsedRows.some(r => r.validationErrors?.length > 0)}
+                onClick={submitCSVImport}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 px-6 rounded-xl cursor-pointer transition-colors shadow-sm flex items-center gap-2"
+              >
+                {importLoading && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 )}
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowImportModal(false);
-                    setParsedRows([]);
-                    setImportError("");
-                  }}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 px-4 rounded-xl cursor-pointer transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={importLoading || parsedRows.length === 0 || parsedRows.some(r => r.validationErrors?.length > 0)}
-                  onClick={submitCSVImport}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold py-2.5 px-6 rounded-xl cursor-pointer transition-colors shadow-sm flex items-center gap-2"
-                >
-                  {importLoading && (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  )}
-                  Proses Impor ({parsedRows.filter(r => !(r.validationErrors?.length > 0)).length} Data Valid)
-                </button>
-              </div>
+                Proses Impor ({parsedRows.filter(r => !(r.validationErrors?.length > 0)).length} Data Valid)
+              </button>
             </div>
           </div>
         </div>
